@@ -73,6 +73,7 @@ Parses URIs as described in [RFC-3986](https://tools.ietf.org/html/rfc3986).
   - `scheme` (pattern): matches the scheme portion of a URI
   - `userinfo` (pattern): matches the userinfo portion of a URI
   - `host` (pattern): matches the host portion of a URI
+  - `IP_literal` (pattern): matches an IP based host portion of a URI. Capture is an [IPv4](#IPv4), [IPv6](#IPv6) or IPvFuture object
   - `port` (pattern): matches the port portion of a URI
   - `authority` (pattern): matches the authority portion of a URI; data is held in named group captures of `"userinfo"`, `"host"`, `"port"`
   - `path` (pattern): matches the path portion of a URI. Captures `nil` for the empty path.
@@ -84,6 +85,7 @@ Parses URIs as described in [RFC-3986](https://tools.ietf.org/html/rfc3986).
   - `sane_host` (pattern): a variant that shouldn't match things that people would not normally consider valid hosts.
   - `sane_authority` (pattern): a variant that shouldn't match things that people would not normally consider valid hosts.
   - `pct_encoded` (pattern): matches a percent encoded octet, produces a capture of the normalised form.
+  - `sub_delims` (pattern): the set of subcomponent delimeters
 
 
 ### `email`
@@ -206,13 +208,14 @@ These patterns should be considered to have non stable APIs.
   - `Trailer` (pattern)
   - `request_target` (pattern)
   - `Host` (pattern)
-  - `Via` (pattern)
+  - `Via` (pattern): captures are a list of tables with fields `.protocol`, `.by` and `.comment`
   - `Connection` (pattern)
-  - `Upgrade` (pattern)
+  - `Upgrade` (pattern): captures are a list of strings containing *protocol* or *protocol/version*
 
 
 #### [RFC 7231](https://tools.ietf.org/html/rfc7231)
 
+  - `IMF_fixdate` (pattern)
   - `Content_Encoding` (pattern)
   - `Content_Type` (pattern)
   - `Content_Language` (pattern)

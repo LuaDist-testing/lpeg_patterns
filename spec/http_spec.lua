@@ -28,6 +28,31 @@ describe("http patterns", function()
 		assert.same({"GET", "http://foo.com/", 1.0}, request_line:match("GET http://foo.com/ HTTP/1.0\r\n"))
 		assert.same({"OPTIONS", "*", 1.1}, request_line:match("OPTIONS * HTTP/1.1\r\n"))
 	end)
+	it("Splits an Upgrade header", function()
+		local Upgrade = lpeg.Ct(http.Upgrade) * EOF
+		assert.same({"Foo"}, Upgrade:match("Foo"))
+		assert.same({"WebSocket"}, Upgrade:match("WebSocket"))
+		assert.same({"HTTP/2.0", "SHTTP/1.3", "IRC/6.9", "RTA/x11"}, Upgrade:match("HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11"))
+	end)
+	it("Splits a Via header", function()
+		local Via = lpeg.Ct(http.Via) * EOF
+		assert.same({{protocol="HTTP/1.0", by="fred"}}, Via:match("1.0 fred"))
+		assert.same({{protocol="HTTP/1.0", by="fred"}}, Via:match("HTTP/1.0 fred"))
+		assert.same({{protocol="Other/myversion", by="fred"}}, Via:match("Other/myversion fred"))
+		assert.same({{protocol="HTTP/1.1", by="p.example.net"}}, Via:match("1.1 p.example.net"))
+		assert.same({
+			{protocol="HTTP/1.0", by="fred"},
+			{protocol="HTTP/1.1", by="p.example.net"}
+		}, Via:match("1.0 fred, 1.1 p.example.net"))
+		assert.same({
+			{protocol="HTTP/1.0", by="my.host:80"},
+			{protocol="HTTP/1.1", by="my.other.host"}
+		}, Via:match("1.0 my.host:80, 1.1 my.other.host"))
+		assert.same({
+			{protocol="HTTP/1.0", by="fred"},
+			{protocol="HTTP/1.1", by="p.example.net"}
+		}, Via:match(",,,1.0 fred ,  ,,, 1.1 p.example.net,,,"))
+	end)
 	it("Handles folding whitespace in field_value", function()
 		local field_value = http.field_value * EOF
 		assert.same("Foo", field_value:match("Foo"))
@@ -175,27 +200,58 @@ describe("http patterns", function()
 	it("Parses a Set-Cookie header", function()
 		local Set_Cookie = lpeg.Ct(http.Set_Cookie) * EOF
 		assert.same({"SID", "31d4d96e407aad42", {}}, Set_Cookie:match"SID=31d4d96e407aad42")
-		assert.same({"SID", "31d4d96e407aad42", {Path="/"; Domain="example.com"}}, Set_Cookie:match"SID=31d4d96e407aad42; Path=/; Domain=example.com")
+		assert.same({"SID", "", {}}, Set_Cookie:match"SID=")
+		assert.same({"SID", "31d4d96e407aad42", {path="/"; domain="example.com"}}, Set_Cookie:match"SID=31d4d96e407aad42; Path=/; Domain=example.com")
 		assert.same({"SID", "31d4d96e407aad42", {
-			Path = "/";
-			Domain = "example.com";
-			Secure = true;
-			Expires = "Sun Nov  6 08:49:37 1994";
+			path = "/";
+			domain = "example.com";
+			secure = true;
+			expires = "Sun Nov  6 08:49:37 1994";
 		}}, Set_Cookie:match"SID=31d4d96e407aad42; Path=/; Domain=example.com; Secure; Expires=Sun Nov  6 08:49:37 1994")
 		-- Space before '='
-		assert.same({"SID", "31d4d96e407aad42", {Path = "/";}}, Set_Cookie:match"SID=31d4d96e407aad42; Path =/")
+		assert.same({"SID", "31d4d96e407aad42", {path = "/";}}, Set_Cookie:match"SID=31d4d96e407aad42; Path =/")
 		-- Quoted cookie value
-		assert.same({"SID", "31d4d96e407aad42", {Path = "/";}}, Set_Cookie:match[[SID="31d4d96e407aad42"; Path=/]])
+		assert.same({"SID", "31d4d96e407aad42", {path = "/";}}, Set_Cookie:match[[SID="31d4d96e407aad42"; Path=/]])
+		-- Crazy whitespace
+		assert.same({"SID", "31d4d96e407aad42", {path = "/";}}, Set_Cookie:match"SID  =   31d4d96e407aad42  ;   Path  =  /")
+		assert.same({"SID", "31d4d96e407aad42", {["foo  bar"] = true;}}, Set_Cookie:match"SID  =   31d4d96e407aad42  ;  foo  bar")
 	end)
 	it("Parses a Cookie header", function()
 		local Cookie = http.Cookie * EOF
 		assert.same({SID = "31d4d96e407aad42"}, Cookie:match"SID=31d4d96e407aad42")
+		assert.same({SID = "31d4d96e407aad42"}, Cookie:match"SID = 31d4d96e407aad42")
 		assert.same({SID = "31d4d96e407aad42", lang = "en-US"}, Cookie:match"SID=31d4d96e407aad42; lang=en-US")
 	end)
-	it("Parses a Content_Disposition header", function()
+	it("Parses a Content-Disposition header", function()
 		local Content_Disposition = lpeg.Ct(http.Content_Disposition) * EOF
 		assert.same({"foo", {}}, Content_Disposition:match"foo")
 		assert.same({"foo", {filename="example"}}, Content_Disposition:match"foo; filename=example")
 		assert.same({"foo", {filename="example"}}, Content_Disposition:match"foo; filename*=UTF-8''example")
+	end)
+	it("Parses a Strict-Transport-Security header", function()
+		local sts_patt = lpeg.Cf(lpeg.Ct(true) * http.Strict_Transport_Security, rawset) * EOF
+		assert.same({["max-age"] = "0"}, sts_patt:match("max-age=0"))
+		assert.same({["max-age"] = "0"}, sts_patt:match("max-age = 0"))
+		assert.same({["max-age"] = "0"}, sts_patt:match("Max-Age=0"))
+		assert.same({["max-age"] = "0"; includesubdomains = true}, sts_patt:match("max-age=0;includeSubdomains"))
+		assert.same({["max-age"] = "0"; includesubdomains = true}, sts_patt:match("max-age=0 ; includeSubdomains"))
+	end)
+	it("Parses an WWW_Authenticate header", function()
+		local WWW_Authenticate = lpeg.Ct(http.WWW_Authenticate) * EOF
+		assert.same({{"Newauth"}}, WWW_Authenticate:match"Newauth")
+		assert.same({{"Newauth", {realm = "apps"}}}, WWW_Authenticate:match[[Newauth realm="apps"]])
+		assert.same({{"Newauth", {realm = "apps"}}}, WWW_Authenticate:match[[Newauth ReaLm="apps"]])
+		assert.same({{"Newauth"}, {"Basic"}}, WWW_Authenticate:match"Newauth, Basic")
+		assert.same({{"Newauth", {realm = "apps", type="1", title="Login to \"apps\""}}, {"Basic", {realm="simple"}}},
+			WWW_Authenticate:match[[Newauth realm="apps", type=1, title="Login to \"apps\"", Basic realm="simple"]])
+	end)
+	it("Parses a HPKP header", function()
+		-- Example from RFC 7469 2.1.5
+		local pkp_patt = lpeg.Cf(lpeg.Ct(true) * http.Public_Key_Pins, function(t, k, v) table.insert(t, {k,v}) return t end) * EOF
+		assert.same({
+			{ "max-age", "3000" };
+			{ "pin-sha256", "d6qzRu9zOECb90Uez27xWltNsj0e1Md7GkYYkVoZWmM=" };
+			{ "pin-sha256", "E9CZ9INDbd+2eRQozYqqbQ2yXLVKB9+xcprMF+44U1g=" };
+		}, pkp_patt:match([[max-age=3000; pin-sha256="d6qzRu9zOECb90Uez27xWltNsj0e1Md7GkYYkVoZWmM="; pin-sha256="E9CZ9INDbd+2eRQozYqqbQ2yXLVKB9+xcprMF+44U1g="]]))
 	end)
 end)

@@ -1,11 +1,11 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "lpeg_patterns"
-version = "0.3-0"
+version = "0.4-0"
 
 description= {
 	summary = "a collection of LPEG patterns";
-	license = "MIT/X11";
+	license = "MIT";
 }
 
 dependencies = {
@@ -15,13 +15,13 @@ dependencies = {
 
 -- LuaDist source
 source = {
-  tag = "0.3-0",
+  tag = "0.4-0",
   url = "git://github.com/LuaDist-testing/lpeg_patterns.git"
 }
 -- Original source
 -- source = {
--- 	url = "https://github.com/daurnimator/lpeg_patterns/archive/v0.3.zip";
--- 	dir = "lpeg_patterns-0.3";
+-- 	url = "https://github.com/daurnimator/lpeg_patterns/archive/v0.4.zip";
+-- 	dir = "lpeg_patterns-0.4";
 -- }
 
 build = {
