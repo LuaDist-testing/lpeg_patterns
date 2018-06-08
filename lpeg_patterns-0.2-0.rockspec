@@ -1,7 +1,7 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "lpeg_patterns"
-version = "0.1-0"
+version = "0.2-0"
 
 description= {
 	summary = "a collection of LPEG patterns";
@@ -15,13 +15,13 @@ dependencies = {
 
 -- LuaDist source
 source = {
-  tag = "0.1-0",
+  tag = "0.2-0",
   url = "git://github.com/LuaDist-testing/lpeg_patterns.git"
 }
 -- Original source
 -- source = {
--- 	url = "https://github.com/daurnimator/lpeg_patterns/archive/v0.1.zip";
--- 	dir = "lpeg_patterns-0.1";
+-- 	url = "https://github.com/daurnimator/lpeg_patterns/archive/v0.2.zip";
+-- 	dir = "lpeg_patterns-0.2";
 -- }
 
 build = {

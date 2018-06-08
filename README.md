@@ -25,13 +25,27 @@ A small module implementing commonly used rules from [RFC-5234 appendix B.1](htt
 
 ### `IPv4`
 
-  - `IPv4address` (pattern): on success, returns addresses as an IPv4 object
+  - `IPv4address` (pattern): parses an IPv4 address in dotted decimal notation. on success, returns addresses as an IPv4 object
+  - `IPv4_methods` (table):
+      - `unpack` (function): the IPv4 address as a series of 4 8 bit numbers
+      - `binary` (function): the IPv4 address as a 4 byte binary string
   - `IPv4_mt` (table): metatable given to IPv4 objects
+      - `__index` (table): `IPv4_methods`
+      - `__tostring` (function): returns the IPv4 address in dotted decimal notation
+
+IPv4 "dotted decimal notation" in this document refers to "strict" form (see [RFC-6943 section 3.1.1](https://tools.ietf.org/html/rfc6943#section-3.1.1)) unless otherwise noted.
 
 
 ### `IPv6`
 
-  - `IPv6address` (pattern)
+  - `IPv6address` (pattern): parses an IPv6 address
+  - `IPv6addrz` (pattern): parses an IPv6 address with optional "ZoneID" (see [RFC-6874](https://tools.ietf.org/html/rfc6874))
+  - `IPv6_methods` (table): methods available on IPv6 objects
+      - `unpack` (function): the IPv6 address as a series of 8 16bit numbers optional followed by zoneid
+      - `binary` (function): the IPv6 address as a 16 byte binary string
+      - `setzoneid` (function): set the zoneid of this IPv6 address
+  - `IPv6_mt` (table): metatable given to IPv6 objects
+      - `__tostring` (function): will return the IPv6 address as a valid IPv6 string
 
 
 ### `uri`
@@ -46,6 +60,8 @@ Parses URIs as described in [RFC-3986](https://tools.ietf.org/html/rfc3986).
       - `path`
       - `query`
       - `fragment`
+  - `uri_reference` (pattern): similar to `uri`, but permits relative URIs
+  - `path` (pattern): matches the path segment of a URI
   - `sane_uri` (pattern): a variant that shouldn't match things that people would not normally consider URIs.
     e.g. uris without a hostname
 
